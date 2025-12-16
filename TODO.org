@@ -1,0 +1,455 @@
+#+TITLE: Servidor JSON con Express - Guía Paso a Paso
+#+AUTHOR: Laboratorio ASIR/DAW
+#+DATE: 2025-12-16
+#+STARTUP: overview
+
+* OBJETIVO DEL PROYECTO
+
+Aprender a crear y desplegar un servidor web que sirva JSON usando diferentes enfoques:
+- Desarrollo local (Node.js + Express)
+- Despliegue en producción (VPS + Nginx)
+- API REST completa con buenas prácticas
+
+Este documento guía el proceso paso a paso para que cualquier estudiante pueda replicarlo.
+
+---
+
+* DONE Fase 1: Endpoints JSON básicos (Desarrollo Local)
+CLOSED: [2025-12-16 lun 16:46]
+SCHEDULED: <2025-12-16>
+
+** Objetivo
+Mejorar ~appserver.js~ para servir JSON con varios endpoints de ejemplo.
+Enfoque KISS (Keep It Simple, Stupid) - solo lo necesario.
+
+** Conceptos clave
+- ~res.json()~ vs ~res.send()~: diferencia entre enviar JSON y texto plano
+- Content-Type: application/json
+- Endpoints RESTful básicos
+
+** Pasos realizados
+
+*** [X] Añadir endpoint ~/api/status~ (GET)
+Devuelve el estado del servidor en JSON
+✓ Implementado con: status, uptime, timestamp, mensaje
+
+*** [X] Añadir endpoint ~/api/data~ (GET)
+Devuelve datos de ejemplo en formato JSON
+✓ Implementado con array de 3 usuarios de ejemplo
+
+*** [X] Añadir endpoint ~/api/echo/:mensaje~ (GET)
+Recibe parámetro en URL y lo devuelve en JSON
+✓ Implementado con transformaciones: mayúsculas, minúsculas, longitud
+
+*** [X] Probar con curl y navegador
+✓ Creado script ~test-server.sh~ para pruebas automáticas
+✓ Todos los tests pasaron exitosamente
+
+** Documentación del proceso
+
+*** Cambios en appserver.js
+- *Líneas iniciales:* 17
+- *Líneas finales:* 121
+- *Líneas añadidas:* 104
+
+*** Estructura añadida:
+1. *Ruta principal (~GET /~):* Página HTML con enlaces a todos los endpoints
+2. *Endpoint ~/api/status~:* Estado del servidor con uptime
+3. *Endpoint ~/api/data~:* Array de objetos JSON
+4. *Endpoint ~/api/echo/:mensaje~:* Echo dinámico con parámetro
+5. *Middleware 404:* Manejador personalizado que devuelve JSON
+6. *Banner de inicio:* Mensaje visual en consola al arrancar
+
+*** Archivos creados:
+- ~mi-servidor/test-server.sh~ → Script de pruebas automático (147 líneas)
+- ~mi-servidor/FASE1-GUIA.md~ → Guía completa para estudiantes (350+ líneas)
+- ~mi-servidor/test-simple.js~ → Servidor minimalista de prueba
+
+*** Problema encontrado y resuelto:
+*Síntoma:* El servidor arrancaba pero devolvía 404 en todos los endpoints
+
+*Causa:* Dos instancias zombie de ~browser-sync~ (PIDs 119284 y 319349)
+ocupando el puerto 3000 desde hace días (Nov 25 y Nov 30)
+
+*Solución:*
+#+begin_src bash
+# Identificar procesos
+ps aux | grep node | grep 3000
+
+# Matar procesos zombie
+kill 119284 319349
+
+# Verificar puerto libre
+lsof -i :3000
+#+end_src
+
+*Lección aprendida:* Siempre verificar que el puerto esté libre antes
+de depurar código. Usar ~lsof -i :PUERTO~ o ~netstat -tulpn | grep PUERTO~
+
+*** Resultados de prueba:
+
+| Endpoint | Método | Status | Respuesta |
+|----------|--------|--------|-----------|
+| ~/api/status~ | GET | 200 OK | JSON con uptime y timestamp |
+| ~/api/data~ | GET | 200 OK | Array de 3 objetos |
+| ~/api/echo/ASIR2024~ | GET | 200 OK | JSON con transformaciones |
+| ~/no-existe~ | GET | 404 | JSON con error personalizado |
+
+*** Comandos para replicar (estudiantes):
+#+begin_src bash
+# 1. Arrancar servidor
+node appserver.js
+
+# 2. En otra terminal, probar endpoints:
+curl http://localhost:3000/api/status
+curl http://localhost:3000/api/data
+curl http://localhost:3000/api/echo/HolaMundo
+
+# 3. O usar el script de pruebas automático:
+bash test-server.sh
+#+end_src
+
+*** Recursos para estudiantes:
+- Ver guía completa: [[file:mi-servidor/FASE1-GUIA.md][FASE1-GUIA.md]]
+- Código comentado: [[file:mi-servidor/appserver.js][appserver.js]]
+- Script de pruebas: [[file:mi-servidor/test-server.sh][test-server.sh]]
+
+** Próximos pasos sugeridos:
+- Crear ejercicios de ampliación (ver FASE1-GUIA.md sección "Ejercicios")
+- Preparar material de presentación para clase
+- Diseñar rúbrica de evaluación si se usa como práctica
+
+---
+
+* TODO Fase 2: Crear rama git ~nginx@vps~
+SCHEDULED: <2025-12-16>
+
+** Objetivo
+Preparar una rama específica para el despliegue en VPS con Nginx
+
+** Comandos a ejecutar
+
+#+begin_src bash
+git checkout -b nginx@vps
+#+end_src
+
+** ¿Por qué una rama separada?
+
+La rama ~main~ mantiene la versión de desarrollo local.
+La rama ~nginx@vps~ contendrá:
+- Configuración específica para producción
+- Archivos de configuración de Nginx
+- Scripts de despliegue
+- Variables de entorno para VPS
+
+Esto permite trabajar en ambos entornos sin conflictos.
+
+** Documentación del proceso
+(Se completará al ejecutar)
+
+---
+
+* TODO Fase 3: Configuración VPS + Nginx (Debian 13)
+SCHEDULED: <2025-12-16>
+
+** Objetivo
+Configurar arquitectura profesional para producción:
+- Nginx como reverse proxy (puerto 80/443)
+- Node.js/Express corriendo en puerto interno (3000)
+- Gestión con systemd
+- (Opcional) SSL con Let's Encrypt
+
+** Conceptos clave
+
+*** ¿Qué es un reverse proxy?
+Cliente → Nginx (puerto 80) → Node.js (puerto 3000) → Respuesta
+
+Ventajas:
+- Nginx maneja SSL/TLS
+- Mejor rendimiento para archivos estáticos
+- Protección del servidor Node.js
+- Múltiples aplicaciones en un mismo servidor
+
+*** Arquitectura del despliegue
+
+#+begin_example
+Internet
+   ↓
+Nginx (puerto 80/443)
+   ↓
+Express (puerto 3000, localhost only)
+#+end_example
+
+** Pasos a realizar
+
+*** [ ] Instalar Node.js en VPS
+#+begin_src bash
+# Verificar versión disponible
+apt search nodejs
+# Instalar
+apt install nodejs npm
+node --version
+#+end_src
+
+*** [ ] Clonar repositorio en VPS
+#+begin_src bash
+cd /opt
+git clone git@github.com:fp-bits/mi-servidor-json.git
+cd mi-servidor-json
+git checkout nginx@vps
+npm install
+#+end_src
+
+*** [ ] Crear servicio systemd para Node.js
+
+Archivo: ~/etc/systemd/system/mi-servidor-json.service~
+
+#+begin_src systemd
+[Unit]
+Description=Servidor JSON con Express
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/mi-servidor-json/mi-servidor
+ExecStart=/usr/bin/node appserver.js
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+#+end_src
+
+*** [ ] Configurar Nginx como reverse proxy
+
+Archivo: ~/etc/nginx/sites-available/mi-servidor-json~
+
+#+begin_src nginx
+server {
+    listen 80;
+    server_name api.tudominio.com;  # Cambiar por tu dominio
+
+    # Logs
+    access_log /var/log/nginx/mi-servidor-json.access.log;
+    error_log /var/log/nginx/mi-servidor-json.error.log;
+
+    # Proxy a Node.js
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+
+        # Headers importantes
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Endpoint de salud (healthcheck)
+    location /health {
+        access_log off;
+        return 200 "OK\n";
+        add_header Content-Type text/plain;
+    }
+}
+#+end_src
+
+*** [ ] Activar configuración y recargar Nginx
+#+begin_src bash
+ln -s /etc/nginx/sites-available/mi-servidor-json /etc/nginx/sites-enabled/
+nginx -t
+systemctl reload nginx
+#+end_src
+
+*** [ ] Iniciar servicio Node.js
+#+begin_src bash
+systemctl enable mi-servidor-json
+systemctl start mi-servidor-json
+systemctl status mi-servidor-json
+#+end_src
+
+*** [ ] Probar desde el exterior
+#+begin_src bash
+curl http://api.tudominio.com/api/status
+#+end_src
+
+** Documentación del proceso
+(Se completará al ejecutar)
+
+---
+
+* TODO Fase 4: Crear rama git ~api-rest~
+SCHEDULED: <2025-12-16>
+
+** Objetivo
+Preparar una rama para desarrollar una API REST completa y profesional
+
+** Comandos a ejecutar
+
+#+begin_src bash
+git checkout main
+git checkout -b api-rest
+#+end_src
+
+** ¿Qué contendrá esta rama?
+
+- API REST completa con operaciones CRUD
+- Middleware de autenticación
+- Manejo de errores centralizado
+- Validación de datos
+- Logging
+- Testing
+
+** Documentación del proceso
+(Se completará al ejecutar)
+
+---
+
+* TODO Fase 5: API REST Completa (Enfoque Didáctico)
+SCHEDULED: <2025-12-16>
+
+** Objetivo
+Crear un servidor Express profesional con todas las buenas prácticas:
+- CRUD completo (Create, Read, Update, Delete)
+- Middleware para logging, autenticación, validación
+- Manejo robusto de errores
+- Código modular y mantenible
+
+** Estructura del proyecto
+
+#+begin_example
+mi-servidor/
+├── appserver.js           # Servidor básico (ya existe)
+├── api-rest.js            # Servidor API REST completo (nuevo)
+├── middleware/            # Middlewares personalizados
+│   ├── logger.js
+│   ├── auth.js
+│   └── errorHandler.js
+├── routes/                # Rutas organizadas por recurso
+│   ├── users.js
+│   └── products.js
+├── controllers/           # Lógica de negocio
+│   ├── userController.js
+│   └── productController.js
+└── package.json
+#+end_example
+
+** Conceptos clave a enseñar
+
+*** 1. Métodos HTTP y su propósito
+- GET: Obtener recursos
+- POST: Crear recursos
+- PUT: Actualizar recursos (completo)
+- PATCH: Actualizar recursos (parcial)
+- DELETE: Eliminar recursos
+
+*** 2. Códigos de estado HTTP
+- 200 OK: Éxito
+- 201 Created: Recurso creado
+- 400 Bad Request: Error del cliente
+- 401 Unauthorized: No autenticado
+- 404 Not Found: Recurso no encontrado
+- 500 Internal Server Error: Error del servidor
+
+*** 3. Middleware en Express
+Funciones que se ejecutan ANTES de llegar al controlador:
+- Logging: registrar todas las peticiones
+- Autenticación: verificar que el usuario está identificado
+- Validación: comprobar que los datos son correctos
+- Error handling: capturar y formatear errores
+
+*** 4. Separación de responsabilidades
+- Routes: definen las URLs y qué hacer
+- Controllers: lógica de negocio
+- Middleware: funcionalidades transversales
+- Models: (más adelante, con base de datos)
+
+** Pasos a realizar
+
+*** [ ] Crear estructura de directorios
+
+*** [ ] Implementar middleware de logging
+
+*** [ ] Implementar middleware de manejo de errores
+
+*** [ ] Crear rutas para recurso "users"
+- GET /api/users (listar todos)
+- GET /api/users/:id (obtener uno)
+- POST /api/users (crear)
+- PUT /api/users/:id (actualizar)
+- DELETE /api/users/:id (eliminar)
+
+*** [ ] Crear controladores con lógica de negocio
+
+*** [ ] Añadir validación de datos con express-validator
+
+*** [ ] Documentar la API (comentarios + README)
+
+*** [ ] Crear colección de Postman/curl para testing
+
+** Documentación del proceso
+(Se completará al ejecutar)
+
+---
+
+* NOTAS PEDAGÓGICAS
+
+** Progresión del aprendizaje
+
+1. *Fase 1 (Local)*: Entender cómo Express sirve JSON
+2. *Fase 3 (VPS)*: Aprender arquitectura de producción con reverse proxy
+3. *Fase 5 (API REST)*: Desarrollar APIs profesionales
+
+** Ejercicios para estudiantes
+
+- Modificar endpoints para devolver datos diferentes
+- Crear nuevos endpoints con parámetros
+- Añadir validación de datos
+- Implementar autenticación básica
+- Desplegar en su propio VPS
+
+** Recursos adicionales
+
+- [[https://developer.mozilla.org/es/docs/Learn/Server-side/Express_Nodejs][MDN: Express/Node.js]]
+- [[https://expressjs.com/es/][Documentación oficial de Express]]
+- [[https://nginx.org/en/docs/][Documentación de Nginx]]
+- [[file:serving-json-comparison.md][Comparativa de plataformas]]
+
+---
+
+* REGISTRO DE PROGRESO
+
+** [2025-12-16 16:15] Proyecto iniciado
+- Creado TODO.org con planificación completa
+- Listo para comenzar Fase 1
+
+** [2025-12-16 16:50] Fase 1 COMPLETADA ✓
+*** Logros:
+- ✅ Mejorado appserver.js con 3 endpoints JSON funcionales
+- ✅ Creado script de pruebas automático (test-server.sh)
+- ✅ Generada guía completa para estudiantes (FASE1-GUIA.md)
+- ✅ Todos los tests pasaron exitosamente
+- ✅ Documentación completa del proceso
+
+*** Problema resuelto:
+- Identificadas y eliminadas instancias zombie de browser-sync
+- Puerto 3000 liberado correctamente
+
+*** Métricas:
+| Métrica | Valor |
+|---------|-------|
+| Líneas de código añadidas | 104 (17 → 121) |
+| Archivos creados | 3 |
+| Endpoints funcionales | 3 |
+| Tests exitosos | 4/4 |
+| Tiempo total | ~35 minutos |
+
+*** Próximo paso:
+Fase 2: Crear rama git ~nginx@vps~ y preparar arquitectura de producción

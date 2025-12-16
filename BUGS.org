@@ -1,26 +1,38 @@
-* CLOSED So... why does gh CLI not show the corresponding 'git remote -v' after :
+* CLOSED Queremos que esta aplicación sea capaz de servir JSON
+CLOSED: [2025-12-16 lun 16:50]
 
-```bash
-gh repo create fp-bits/mi-servidor-json --public
-```
+** RESOLUCIÓN
 
-** RESOLUTION [2025-12-16]
+✅ *COMPLETADO:* La aplicación ahora sirve JSON exitosamente con 3 endpoints funcionales.
 
-The ~gh repo create~ command only creates the repository on GitHub's servers.
-It does NOT automatically configure the git remote unless you use the ~--source=.~ flag.
+*** Endpoints implementados:
+- ~GET /api/status~ → Estado del servidor con uptime
+- ~GET /api/data~ → Array de datos de ejemplo
+- ~GET /api/echo/:mensaje~ → Echo dinámico con parámetro
 
-*** What was needed:
-```bash
-# Manual approach (what we did):
-git remote add origin git@github.com:fp-bits/mi-servidor-json.git
-git push -u origin main
+*** Archivos modificados/creados:
+- [[file:mi-servidor/appserver.js][appserver.js]] → Mejorado con endpoints JSON (17 → 121 líneas)
+- [[file:mi-servidor/test-server.sh][test-server.sh]] → Script de pruebas automático
+- [[file:mi-servidor/FASE1-GUIA.md][FASE1-GUIA.md]] → Guía completa para estudiantes
+- [[file:TODO.org][TODO.org]] → Planificación y documentación del proyecto
 
-# Or use this one-liner next time:
-gh repo create fp-bits/mi-servidor-json --public --source=. --remote=origin --push
-```
+*** Pruebas realizadas:
+| Test | Resultado |
+|------|-----------|
+| ~GET /api/status~ | ✓ 200 OK |
+| ~GET /api/data~ | ✓ 200 OK |
+| ~GET /api/echo/ASIR2024~ | ✓ 200 OK |
+| ~GET /ruta-inexistente~ | ✓ 404 JSON personalizado |
 
-*** Current remotes:
-- ~old~ → git@github.com:pabloquesada78/servidorwebrecibe.git
-- ~origin~ → git@github.com:fp-bits/mi-servidor-json.git
+*** Comparativa de plataformas:
+Ver análisis completo en: [[file:serving-json-comparison.md][Github-vs-Render-vs-VPSNginx]]
 
-✓ Remote configured and code pushed successfully.
+*Decisión:* Desarrollar localmente primero, luego desplegar en VPS+Nginx para producción.
+
+*** Próximas fases:
+1. [PENDIENTE] Fase 2: Crear rama ~nginx@vps~
+2. [PENDIENTE] Fase 3: Configurar VPS + Nginx (Debian 13)
+3. [PENDIENTE] Fase 4: Crear rama ~api-rest~
+4. [PENDIENTE] Fase 5: API REST completa
+
+Ver detalles en: [[file:TODO.org][TODO.org]]
