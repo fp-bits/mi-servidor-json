@@ -1,0 +1,26 @@
+* CLOSED So... why does gh CLI not show the corresponding 'git remote -v' after :
+
+```bash
+gh repo create fp-bits/mi-servidor-json --public
+```
+
+** RESOLUTION [2025-12-16]
+
+The ~gh repo create~ command only creates the repository on GitHub's servers.
+It does NOT automatically configure the git remote unless you use the ~--source=.~ flag.
+
+*** What was needed:
+```bash
+# Manual approach (what we did):
+git remote add origin git@github.com:fp-bits/mi-servidor-json.git
+git push -u origin main
+
+# Or use this one-liner next time:
+gh repo create fp-bits/mi-servidor-json --public --source=. --remote=origin --push
+```
+
+*** Current remotes:
+- ~old~ → git@github.com:pabloquesada78/servidorwebrecibe.git
+- ~origin~ → git@github.com:fp-bits/mi-servidor-json.git
+
+✓ Remote configured and code pushed successfully.
