@@ -1,0 +1,64 @@
+# ========================================
+# Servicio systemd para Node.js + Express
+# ========================================
+# Ubicación en VPS: /etc/systemd/system/mi-servidor-json.service
+#
+# Instalación:
+#   sudo cp mi-servidor-json.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable mi-servidor-json
+#   sudo systemctl start mi-servidor-json
+#
+# Ver logs:
+#   sudo journalctl -u mi-servidor-json -f
+
+[Unit]
+Description=Servidor JSON con Express - Lab ASIR/DAW
+Documentation=https://github.com/fp-bits/mi-servidor-json
+After=network.target
+
+# Si usas base de datos, añade dependencias:
+# After=network.target postgresql.service
+# Wants=postgresql.service
+
+[Service]
+Type=simple
+
+# Usuario y grupo (www-data es el usuario estándar de Nginx)
+User=www-data
+Group=www-data
+
+# Directorio de trabajo (actualizar con tu ruta en el VPS)
+WorkingDirectory=/opt/mi-servidor-json/mi-servidor
+
+# Comando para ejecutar el servidor
+# IMPORTANTE: Actualizar la ruta de node si es diferente
+ExecStart=/usr/bin/node appserver.js
+
+# Variables de entorno
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+# Reinicio automático
+Restart=on-failure
+RestartSec=10
+
+# Política de reinicio más agresiva si falla repetidamente
+StartLimitInterval=60
+StartLimitBurst=3
+
+# Seguridad: limitar capacidades del proceso
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Logs: enviar stdout/stderr a journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mi-servidor-json
+
+# Límites de recursos (opcional)
+# LimitNOFILE=65536
+# LimitNPROC=512
+
+[Install]
+WantedBy=multi-user.target
