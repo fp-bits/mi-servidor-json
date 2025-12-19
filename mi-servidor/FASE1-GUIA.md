@@ -7,6 +7,7 @@
 
 ---
 
+
 ## 📚 Conceptos Aprendidos
 
 1. **`res.json()` vs `res.send()`**
